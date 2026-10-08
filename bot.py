@@ -15,17 +15,33 @@ from telegram.ext import (
 )
 from groq import AsyncGroq
 from datetime import datetime, timedelta, timezone
+import random
 
 from config import BOT_TOKEN, GROQ_API_KEY
 
 
 # =========================
-# НАСТРОЙКИ
+# ИНФОРМАЦИЯ О БОТЕ
 # =========================
 
-client = AsyncGroq(api_key=GROQ_API_KEY)
+BOT_NAME = "Vega CHAT"
+BOT_VERSION = "1.3.0"
+
+
+# =========================
+# GROQ
+# =========================
+
+client = AsyncGroq(
+    api_key=GROQ_API_KEY
+)
 
 MODEL = "openai/gpt-oss-20b"
+
+
+# =========================
+# АДМИНИСТРАТОРЫ
+# =========================
 
 ADMINS = {
     "DKLART",
@@ -34,7 +50,7 @@ ADMINS = {
 
 
 # =========================
-# НАСТРОЙКИ БОТА
+# НАСТРОЙКИ
 # =========================
 
 settings = {
@@ -64,7 +80,7 @@ warnings = {}
 
 
 # =========================
-# ПОЛЬЗОВАТЕЛИ
+# ИЗВЕСТНЫЕ ПОЛЬЗОВАТЕЛИ
 # username -> user_id
 # =========================
 
@@ -79,13 +95,14 @@ logs = []
 
 
 def add_log(text):
-    timestamp = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    timestamp = datetime.now().strftime(
+        "%d.%m.%Y %H:%M:%S"
+    )
 
     logs.append(
         f"[{timestamp}] {text}"
     )
 
-    # Храним последние 100 логов
     if len(logs) > 100:
         logs.pop(0)
 
@@ -95,12 +112,17 @@ def add_log(text):
 # =========================
 
 def is_admin(username):
+
     if not username:
         return False
 
-    return username.lstrip("@").lower() in {
-        name.lower() for name in ADMINS
-    }
+    return (
+        username.lstrip("@").lower()
+        in {
+            name.lower()
+            for name in ADMINS
+        }
+    )
 
 
 # =========================
@@ -108,10 +130,12 @@ def is_admin(username):
 # =========================
 
 def remember_user(user):
+
     if not user:
         return
 
     if user.username:
+
         known_users[
             user.username.lower()
         ] = user.id
@@ -125,6 +149,7 @@ async def help_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     keyboard = [
         [
             InlineKeyboardButton(
@@ -151,7 +176,9 @@ async def help_command(
     await update.message.reply_text(
         "📚 Vega CHAT — помощь\n\n"
         "Выбери раздел:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
     )
 
 
@@ -163,6 +190,7 @@ async def help_buttons(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
 
     await query.answer()
@@ -208,10 +236,13 @@ async def help_buttons(
             "👥 Функции группы\n\n"
             "👋 Приветствие новых участников\n"
             "⚠️ Система варнов\n"
-            "🔇 Мут после 3 варнов\n\n"
+            "🔇 Мут после 3 варнов\n"
+            "🔓 Снятие мута: /unmute\n"
+            "📢 Вызов: /call\n\n"
             "Администраторы:\n"
             "/adminPANEL\n"
-            "/warn @username"
+            "/warn @username\n"
+            "/unmute @username"
         )
 
     elif query.data == "help_info":
@@ -222,6 +253,7 @@ async def help_buttons(
             "🧠 Powered by Groq\n"
             "🎮 Игры\n"
             "🛡 Модерация\n\n"
+            f"📦 Версия: {BOT_VERSION}\n\n"
             "👑 Создатель:\n"
             "@Qnwru"
         )
@@ -240,7 +272,9 @@ async def help_buttons(
 
     await query.edit_message_text(
         text,
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
     )
 
 
@@ -248,6 +282,7 @@ async def help_back(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     query = update.callback_query
 
     await query.answer()
@@ -278,7 +313,9 @@ async def help_back(
     await query.edit_message_text(
         "📚 Vega CHAT — помощь\n\n"
         "Выбери раздел:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(
+            keyboard
+        )
     )
 
 
@@ -290,7 +327,11 @@ async def handle_message(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    if not update.message or not update.message.text:
+
+    if not update.message:
+        return
+
+    if not update.message.text:
         return
 
     user = update.effective_user
@@ -327,7 +368,8 @@ async def handle_message(
         if not settings["games"]:
 
             await update.message.reply_text(
-                "🔴 Игры сейчас отключены администратором."
+                "🔴 Игры сейчас отключены "
+                "администратором."
             )
 
             return
@@ -367,7 +409,9 @@ async def handle_message(
 
         await update.message.reply_text(
             "🎮 Выбери игру:",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            )
         )
 
         return
@@ -395,7 +439,9 @@ async def handle_message(
 
         stats["ai_requests"] += 1
 
-        await update.message.chat.send_action("typing")
+        await update.message.chat.send_action(
+            "typing"
+        )
 
         response = await client.chat.completions.create(
             model=MODEL,
@@ -404,7 +450,8 @@ async def handle_message(
                     "role": "system",
                     "content": (
                         "Ты полезный Telegram-ассистент. "
-                        "Отвечай понятно, дружелюбно и по существу. "
+                        "Отвечай понятно, дружелюбно "
+                        "и по существу. "
                         "Отвечай на языке пользователя."
                     ),
                 },
@@ -424,7 +471,11 @@ async def handle_message(
 
         max_length = 4000
 
-        for i in range(0, len(answer), max_length):
+        for i in range(
+            0,
+            len(answer),
+            max_length
+        ):
 
             await update.message.reply_text(
                 answer[i:i + max_length]
@@ -432,10 +483,13 @@ async def handle_message(
 
     except Exception as e:
 
-        print(f"Groq error: {e}")
+        print(
+            f"Groq error: {e}"
+        )
 
         await update.message.reply_text(
-            "❌ Произошла ошибка при обращении к ИИ."
+            "❌ Произошла ошибка "
+            "при обращении к ИИ."
         )
 
 
@@ -447,9 +501,8 @@ async def game_button(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    query = update.callback_query
 
-    await query.answer()
+    query = update.callback_query
 
     if not settings["games"]:
 
@@ -460,14 +513,38 @@ async def game_button(
 
         return
 
+    await query.answer()
+
     games = {
         "game_dice": "🎲",
         "game_football": "⚽",
         "game_basketball": "🏀",
         "game_darts": "🎯",
         "game_casino": "🎰",
-        "game_coin": "🪙",
     }
+
+    if query.data == "game_coin":
+
+        result = random.choice(
+            [
+                "🪙 Орёл!",
+                "🪙 Решка!"
+            ]
+        )
+
+        stats["games"] += 1
+
+        if query.from_user:
+            stats["game_users"].add(
+                query.from_user.id
+            )
+
+        await context.bot.send_message(
+            chat_id=query.message.chat.id,
+            text=result
+        )
+
+        return
 
     emoji = games.get(query.data)
 
@@ -491,21 +568,9 @@ async def game_button(
 # ADMIN PANEL
 # =========================
 
-async def admin_panel(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    user = update.effective_user
+def admin_keyboard():
 
-    if not user or not is_admin(user.username):
-
-        await update.message.reply_text(
-            "⛔ У тебя нет доступа к админ-панели."
-        )
-
-        return
-
-    keyboard = [
+    return [
         [
             InlineKeyboardButton(
                 "📊 Статистика",
@@ -515,14 +580,22 @@ async def admin_panel(
         [
             InlineKeyboardButton(
                 "👋 Приветствие: "
-                + ("🟢 ВКЛ" if settings["welcome"] else "🔴 ВЫКЛ"),
+                + (
+                    "🟢 ВКЛ"
+                    if settings["welcome"]
+                    else "🔴 ВЫКЛ"
+                ),
                 callback_data="admin_welcome"
             ),
         ],
         [
             InlineKeyboardButton(
                 "🎮 Игры: "
-                + ("🟢 ВКЛ" if settings["games"] else "🔴 ВЫКЛ"),
+                + (
+                    "🟢 ВКЛ"
+                    if settings["games"]
+                    else "🔴 ВЫКЛ"
+                ),
                 callback_data="admin_games"
             ),
         ],
@@ -534,17 +607,45 @@ async def admin_panel(
         ],
         [
             InlineKeyboardButton(
+                "🆕 Обновления",
+                callback_data="admin_updates"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
                 "🔄 Обновить",
                 callback_data="admin_refresh"
             ),
         ],
     ]
 
+
+async def admin_panel(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    user = update.effective_user
+
+    if not user or not is_admin(
+        user.username
+    ):
+
+        await update.message.reply_text(
+            "⛔ У тебя нет доступа "
+            "к админ-панели."
+        )
+
+        return
+
     await update.message.reply_text(
         "🛡 Vega CHAT — ADMIN PANEL\n\n"
-        "🔐 Доступ разрешён.\n\n"
+        "🔐 Доступ разрешён.\n"
+        f"📦 Версия: {BOT_VERSION}\n\n"
         "Выбери раздел:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=InlineKeyboardMarkup(
+            admin_keyboard()
+        )
     )
 
 
@@ -556,11 +657,13 @@ async def admin_buttons(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    query = update.callback_query
 
+    query = update.callback_query
     user = query.from_user
 
-    if not user or not is_admin(user.username):
+    if not user or not is_admin(
+        user.username
+    ):
 
         await query.answer(
             "⛔ Нет доступа.",
@@ -588,8 +691,10 @@ async def admin_buttons(
 
         text = (
             "📊 Vega CHAT — статистика\n\n"
-            f"🎮 Сыграно игр: {stats['games']}\n"
-            f"💬 Сообщений: {stats['messages']}\n"
+            f"🎮 Сыграно игр: "
+            f"{stats['games']}\n"
+            f"💬 Сообщений: "
+            f"{stats['messages']}\n"
             f"👥 Пользователей: "
             f"{len(stats['users'])}\n"
             f"🎮 Игроков: "
@@ -620,7 +725,9 @@ async def admin_buttons(
 
         await query.edit_message_text(
             text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            )
         )
 
     # =========================
@@ -629,7 +736,9 @@ async def admin_buttons(
 
     elif query.data == "admin_welcome":
 
-        settings["welcome"] = not settings["welcome"]
+        settings["welcome"] = not settings[
+            "welcome"
+        ]
 
         state = (
             "🟢 ВКЛ"
@@ -638,7 +747,8 @@ async def admin_buttons(
         )
 
         add_log(
-            f"{admin_name} изменил приветствие: {state}"
+            f"{admin_name} изменил приветствие: "
+            f"{state}"
         )
 
         await show_admin_panel(
@@ -652,7 +762,9 @@ async def admin_buttons(
 
     elif query.data == "admin_games":
 
-        settings["games"] = not settings["games"]
+        settings["games"] = not settings[
+            "games"
+        ]
 
         state = (
             "🟢 ВКЛ"
@@ -661,7 +773,8 @@ async def admin_buttons(
         )
 
         add_log(
-            f"{admin_name} изменил игры: {state}"
+            f"{admin_name} изменил игры: "
+            f"{state}"
         )
 
         await show_admin_panel(
@@ -708,7 +821,67 @@ async def admin_buttons(
 
         await query.edit_message_text(
             text,
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            )
+        )
+
+    # =========================
+    # ОБНОВЛЕНИЯ
+    # =========================
+
+    elif query.data == "admin_updates":
+
+        text = (
+            "🆕 ИСТОРИЯ ОБНОВЛЕНИЙ\n\n"
+
+            "📦 Версия 1.3.0\n"
+            "• Добавлена команда /unmute\n"
+            "• /unmute снимает мут\n"
+            "• /unmute сбрасывает все варны\n"
+            "• Добавлена команда /call\n"
+            "• /call повторяет username 10 раз\n"
+            "• Добавлен раздел «Обновления»\n"
+            "• Добавлен номер версии бота\n"
+            "• Исправлена игра 🪙 Орёл/решка\n"
+            "• Исправлена двойная обработка "
+            "кнопок игр\n\n"
+
+            "📦 Версия 1.2.0\n"
+            "• Добавлена админ-панель\n"
+            "• Добавлена статистика\n"
+            "• Добавлены логи\n"
+            "• Добавлено управление играми\n"
+            "• Добавлено управление приветствием\n"
+            "• Добавлена система варнов\n"
+            "• Добавлен мут после 3 варнов\n\n"
+
+            "📦 Версия 1.1.0\n"
+            "• Добавлен Groq AI\n"
+            "• Добавлена команда ИИ\n"
+            "• Добавлены игры\n"
+            "• Добавлено приветствие\n"
+            "• Добавлена команда /help\n\n"
+
+            "📦 Версия 1.0.0\n"
+            "• Первый запуск Vega CHAT\n"
+            "• Базовая система Telegram-бота"
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "⬅️ Назад",
+                    callback_data="admin_back"
+                )
+            ]
+        ]
+
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                keyboard
+            )
         )
 
     # =========================
@@ -720,6 +893,10 @@ async def admin_buttons(
         await show_admin_panel(query)
 
 
+# =========================
+# ПОКАЗ АДМИН-ПАНЕЛИ
+# =========================
+
 async def show_admin_panel(
     query,
     notice=None
@@ -727,62 +904,20 @@ async def show_admin_panel(
 
     text = (
         "🛡 Vega CHAT — ADMIN PANEL\n\n"
-        "🔐 Доступ разрешён."
+        "🔐 Доступ разрешён.\n"
+        f"📦 Версия: {BOT_VERSION}"
     )
 
     if notice:
         text += f"\n\n{notice}"
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📊 Статистика",
-                callback_data="admin_stats"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "👋 Приветствие: "
-                + (
-                    "🟢 ВКЛ"
-                    if settings["welcome"]
-                    else "🔴 ВЫКЛ"
-                ),
-                callback_data="admin_welcome"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🎮 Игры: "
-                + (
-                    "🟢 ВКЛ"
-                    if settings["games"]
-                    else "🔴 ВЫКЛ"
-                ),
-                callback_data="admin_games"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📜 Логи",
-                callback_data="admin_logs"
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔄 Обновить",
-                callback_data="admin_refresh"
-            )
-        ],
-    ]
-
     await query.edit_message_text(
         text,
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-
-# =========================
+        reply_markup=InlineKeyboardMarkup(
+            admin_keyboard()
+        )
+        )
+    # =========================
 # /warn
 # =========================
 
@@ -790,18 +925,21 @@ async def warn_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     admin = update.effective_user
 
-    if not admin or not is_admin(admin.username):
+    if not admin or not is_admin(
+        admin.username
+    ):
 
         await update.message.reply_text(
-            "⛔ Только администраторы Vega CHAT могут выдавать варны."
+            "⛔ Только администраторы Vega CHAT "
+            "могут выдавать варны."
         )
 
         return
 
     if not update.effective_chat:
-
         return
 
     if not context.args:
@@ -813,7 +951,11 @@ async def warn_command(
 
         return
 
-    username = context.args[0].lstrip("@").lower()
+    username = (
+        context.args[0]
+        .lstrip("@")
+        .lower()
+    )
 
     user_id = known_users.get(username)
 
@@ -828,10 +970,11 @@ async def warn_command(
         return
 
     chat_id = update.effective_chat.id
-
     key = (chat_id, user_id)
 
-    warnings[key] = warnings.get(key, 0) + 1
+    warnings[key] = (
+        warnings.get(key, 0) + 1
+    )
 
     count = warnings[key]
 
@@ -842,19 +985,16 @@ async def warn_command(
     )
 
     add_log(
-        f"{admin_name} выдал варн @{username} "
-        f"({count}/3)"
+        f"{admin_name} выдал варн "
+        f"@{username} ({count}/3)"
     )
-
-    # =========================
-    # 3 ВАРНА
-    # =========================
 
     if count >= 3:
 
-        until = datetime.now(
-            timezone.utc
-        ) + timedelta(hours=1)
+        until = (
+            datetime.now(timezone.utc)
+            + timedelta(hours=1)
+        )
 
         try:
 
@@ -872,16 +1012,17 @@ async def warn_command(
                 f"на 1 час после 3 варнов"
             )
 
-            warnings[key] = 0
-
             await update.message.reply_text(
-                f"🔇 @{username} получил мут на 1 час.\n\n"
+                f"🔇 @{username} получил мут "
+                f"на 1 час.\n\n"
                 "⚠️ Причина: 3/3 предупреждения."
             )
 
         except Exception as e:
 
-            print(f"Mute error: {e}")
+            print(
+                f"Mute error: {e}"
+            )
 
             await update.message.reply_text(
                 "❌ Не удалось выдать мут.\n"
@@ -891,9 +1032,11 @@ async def warn_command(
         return
 
     await update.message.reply_text(
-        f"⚠️ @{username} получил предупреждение.\n\n"
+        f"⚠️ @{username} получил "
+        f"предупреждение.\n\n"
         f"Варны: {count}/3"
     )
+
 
 # =========================
 # /unmute
@@ -903,40 +1046,55 @@ async def unmute_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     admin = update.effective_user
 
-    if not admin or not is_admin(admin.username):
+    if not admin or not is_admin(
+        admin.username
+    ):
+
         await update.message.reply_text(
-            "⛔ Только администраторы могут снимать мут."
+            "⛔ Только администраторы могут "
+            "использовать /unmute."
         )
+
         return
 
     if not update.effective_chat:
         return
 
     if not context.args:
+
         await update.message.reply_text(
             "🔓 Использование:\n"
             "/unmute @username"
         )
+
         return
 
-    username = context.args[0].lstrip("@").lower()
+    username = (
+        context.args[0]
+        .lstrip("@")
+        .lower()
+    )
 
     user_id = known_users.get(username)
 
     if not user_id:
+
         await update.message.reply_text(
-            "❌ Пользователь не найден.\n\n"
-            "Бот должен был увидеть его сообщение "
-            "в группе хотя бы один раз."
+            "❌ Я не знаю этого пользователя.\n\n"
+            "Пусть он сначала напишет "
+            "сообщение в группе."
         )
+
         return
 
     chat_id = update.effective_chat.id
     key = (chat_id, user_id)
 
     try:
+
         await context.bot.restrict_chat_member(
             chat_id=chat_id,
             user_id=user_id,
@@ -951,33 +1109,70 @@ async def unmute_command(
                 can_send_polls=True,
                 can_send_other_messages=True,
                 can_add_web_page_previews=True,
-                can_change_info=False,
                 can_invite_users=True,
-                can_pin_messages=False,
-                can_manage_topics=False,
             )
         )
 
-        # Сбрасываем все варны
-        warnings[key] = 0
+        # Полностью сбрасываем варны
+        warnings.pop(key, None)
 
         add_log(
-            f"@{admin.username} снял мут и сбросил варны "
-            f"@{username}"
+            f"@{admin.username} снял мут "
+            f"с @{username} и сбросил варны"
         )
 
         await update.message.reply_text(
-            f"🔓 Мут с @{username} снят.\n"
+            f"🔓 Мут с @{username} снят!\n"
             f"⚠️ Варны сброшены: 0/3"
         )
 
     except Exception as e:
-        print(f"Unmute error: {e}")
+
+        print(
+            f"UNMUTE ERROR: {e}"
+        )
 
         await update.message.reply_text(
-            "❌ Не удалось снять мут.\n"
-            "Проверь права бота."
+            "❌ Не удалось снять мут.\n\n"
+            "Проверь, что Vega CHAT является "
+            "администратором группы и имеет "
+            "право блокировать пользователей."
         )
+
+
+# =========================
+# /call
+# =========================
+
+async def call_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    if not update.message:
+        return
+
+    if not context.args:
+
+        await update.message.reply_text(
+            "📢 Использование:\n"
+            "/call @username"
+        )
+
+        return
+
+    username = context.args[0].strip()
+
+    if not username.startswith("@"):
+        username = "@" + username
+
+    text = " ".join(
+        [username] * 10
+    )
+
+    await update.message.reply_text(
+        text
+    )
 
 
 # =========================
@@ -988,6 +1183,7 @@ async def welcome_new_member(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     if not settings["welcome"]:
         return
 
@@ -996,28 +1192,44 @@ async def welcome_new_member(
     if not result:
         return
 
-    old_status = result.old_chat_member.status
-    new_status = result.new_chat_member.status
+    old_status = (
+        result.old_chat_member.status
+    )
+
+    new_status = (
+        result.new_chat_member.status
+    )
 
     if (
-        old_status in {"left", "kicked"}
-        and new_status in {
+        old_status in {
+            "left",
+            "kicked"
+        }
+        and
+        new_status in {
             "member",
             "administrator"
         }
     ):
 
-        user = result.new_chat_member.user
+        user = (
+            result.new_chat_member.user
+        )
 
         remember_user(user)
 
-        name = user.first_name or "новый участник"
+        name = (
+            user.first_name
+            or "новый участник"
+        )
 
         await update.effective_chat.send_message(
             f"👋 Добро пожаловать, {name}!\n\n"
-            "🤖 Ты находишься в группе с Vega CHAT.\n"
+            "🤖 Ты находишься в группе "
+            "с Vega CHAT.\n"
             "🎮 Напиши «ИГРА», чтобы поиграть.\n"
-            "🧠 Напиши «ИИ <текст>», чтобы задать вопрос."
+            "🧠 Напиши «ИИ <текст>», "
+            "чтобы задать вопрос."
         )
 
 
@@ -1029,10 +1241,15 @@ async def error_handler(
     update: object,
     context: ContextTypes.DEFAULT_TYPE
 ):
+
     print(
         f"Telegram error: {context.error}"
     )
-    # что после
+
+
+# =========================
+# MAIN
+# =========================
 
 def main():
 
@@ -1042,7 +1259,10 @@ def main():
         .build()
     )
 
-    # Обычные сообщения
+    # =========================
+    # СООБЩЕНИЯ
+    # =========================
+
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -1050,7 +1270,10 @@ def main():
         )
     )
 
-    # /help
+    # =========================
+    # КОМАНДЫ
+    # =========================
+
     app.add_handler(
         CommandHandler(
             "help",
@@ -1058,7 +1281,6 @@ def main():
         )
     )
 
-    # /adminPANEL
     app.add_handler(
         CommandHandler(
             "adminPANEL",
@@ -1066,7 +1288,6 @@ def main():
         )
     )
 
-    # /warn
     app.add_handler(
         CommandHandler(
             "warn",
@@ -1074,7 +1295,24 @@ def main():
         )
     )
 
-    # Игры
+    app.add_handler(
+        CommandHandler(
+            "unmute",
+            unmute_command
+        )
+    )
+
+    app.add_handler(
+        CommandHandler(
+            "call",
+            call_command
+        )
+    )
+
+    # =========================
+    # ИГРЫ
+    # =========================
+
     app.add_handler(
         CallbackQueryHandler(
             game_button,
@@ -1082,7 +1320,10 @@ def main():
         )
     )
 
-    # Кнопки Help
+    # =========================
+    # HELP
+    # =========================
+
     app.add_handler(
         CallbackQueryHandler(
             help_buttons,
@@ -1097,7 +1338,10 @@ def main():
         )
     )
 
-    # Кнопки админ-панели
+    # =========================
+    # ADMIN
+    # =========================
+
     app.add_handler(
         CallbackQueryHandler(
             admin_buttons,
@@ -1105,7 +1349,10 @@ def main():
         )
     )
 
-    # Новые участники
+    # =========================
+    # НОВЫЕ УЧАСТНИКИ
+    # =========================
+
     app.add_handler(
         ChatMemberHandler(
             welcome_new_member,
@@ -1113,15 +1360,25 @@ def main():
         )
     )
 
-    # Обработчик ошибок
+    # =========================
+    # ОШИБКИ
+    # =========================
+
     app.add_error_handler(
         error_handler
     )
 
-    print("🤖 Vega CHAT запущен!")
+    print(
+        f"🤖 {BOT_NAME} "
+        f"v{BOT_VERSION} запущен!"
+    )
 
     app.run_polling()
 
+
+# =========================
+# ЗАПУСК
+# =========================
 
 if __name__ == "__main__":
     main()

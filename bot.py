@@ -895,6 +895,90 @@ async def warn_command(
         f"Варны: {count}/3"
     )
 
+# =========================
+# /unmute
+# =========================
+
+async def unmute_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    admin = update.effective_user
+
+    if not admin or not is_admin(admin.username):
+        await update.message.reply_text(
+            "⛔ Только администраторы могут снимать мут."
+        )
+        return
+
+    if not update.effective_chat:
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "🔓 Использование:\n"
+            "/unmute @username"
+        )
+        return
+
+    username = context.args[0].lstrip("@").lower()
+
+    user_id = known_users.get(username)
+
+    if not user_id:
+        await update.message.reply_text(
+            "❌ Пользователь не найден.\n\n"
+            "Бот должен был увидеть его сообщение "
+            "в группе хотя бы один раз."
+        )
+        return
+
+    chat_id = update.effective_chat.id
+    key = (chat_id, user_id)
+
+    try:
+        await context.bot.restrict_chat_member(
+            chat_id=chat_id,
+            user_id=user_id,
+            permissions=ChatPermissions(
+                can_send_messages=True,
+                can_send_audios=True,
+                can_send_documents=True,
+                can_send_photos=True,
+                can_send_videos=True,
+                can_send_video_notes=True,
+                can_send_voice_notes=True,
+                can_send_polls=True,
+                can_send_other_messages=True,
+                can_add_web_page_previews=True,
+                can_change_info=False,
+                can_invite_users=True,
+                can_pin_messages=False,
+                can_manage_topics=False,
+            )
+        )
+
+        # Сбрасываем все варны
+        warnings[key] = 0
+
+        add_log(
+            f"@{admin.username} снял мут и сбросил варны "
+            f"@{username}"
+        )
+
+        await update.message.reply_text(
+            f"🔓 Мут с @{username} снят.\n"
+            f"⚠️ Варны сброшены: 0/3"
+        )
+
+    except Exception as e:
+        print(f"Unmute error: {e}")
+
+        await update.message.reply_text(
+            "❌ Не удалось снять мут.\n"
+            "Проверь права бота."
+        )
+
 
 # =========================
 # ПРИВЕТСТВИЕ

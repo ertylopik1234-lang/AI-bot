@@ -1,10 +1,10 @@
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not BOT_TOKEN:
-    raise RuntimeError("Переменная BOT_TOKEN не задана")
+    raise RuntimeError("BOT_TOKEN не задан в Environment Variables")
 
-if not GEMINI_API_KEY:
-    raise RuntimeError("Переменная GEMINI_API_KEY не задана")
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY не задан в Environment Variables")
